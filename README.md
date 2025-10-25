@@ -1,0 +1,1 @@
+# He_thong_kinh_doanh_thong_minh-Nhom_1_Ca_1
