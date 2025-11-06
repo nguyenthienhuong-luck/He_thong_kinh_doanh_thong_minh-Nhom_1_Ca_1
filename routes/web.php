@@ -11,14 +11,15 @@ use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\AnalysisController;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\DailyReportMail;
+use App\Services\DailyReportService;
 
 // Route cho màn hình Loading
 Route::get('/loading', function () {
-  return view('home.loading');
+    return view('home.loading');
 })->name('loading');
-Route::get('/loading', function () {
-  return view('home.loading');
-})->name('loading');
+
 
 // Route cho Home
 Route::get('/home', [HomeController::class, 'index'])->name('home');
@@ -103,4 +104,18 @@ Route::middleware('checkLogin')->group(function () {
 Route::get('/analysis', [AnalysisController::class, 'index'])
     ->middleware('auth')
     ->name('analysis');
+
 });
+  // 📧 Gửi báo cáo hằng ngày qua email
+Route::post('/send-daily-report', function () {
+    $user = Auth::user();
+
+    // Lấy service tạo dữ liệu báo cáo
+    $reportService = app(DailyReportService::class);
+    $reportData = $reportService->buildForUser($user);
+
+    // ✅ Truyền đủ 2 tham số ($user, $reportData)
+    Mail::to($user->email)->send(new DailyReportMail($user, $reportData));
+
+    return redirect()->back()->with('success', '📧 Báo cáo đã được gửi về email của bạn!');
+})->name('send.daily.report');

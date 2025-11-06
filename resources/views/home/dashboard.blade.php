@@ -17,7 +17,6 @@
         font-family: 'Poppins', sans-serif;
     }
 
-    /* 🟣 Layout trung tâm */
     .main-content-wrapper {
         display: flex;
         justify-content: center;
@@ -36,7 +35,6 @@
         transition: all 0.3s ease;
     }
 
-    /* 🌈 Thanh tổng số dư */
     .balance-header {
         max-width: 95%;
         margin: 35px auto 0;
@@ -68,7 +66,6 @@
         color: #777;
     }
 
-    /* Nút đổi tiền */
     .currency-btn {
         background: var(--gradient);
         color: #fff;
@@ -88,7 +85,6 @@
         box-shadow: 0 5px 15px rgba(108, 99, 255, 0.3);
     }
 
-    /* 🟪 Header */
     .page-header {
         display: flex;
         justify-content: space-between;
@@ -106,7 +102,6 @@
         margin: 0;
     }
 
-    /* 🧾 CARD */
     .card {
         border: none !important;
         border-radius: 18px !important;
@@ -144,7 +139,6 @@
         color: var(--primary) !important;
     }
 
-    /* Nút outline */
     .btn-outline-primary-color {
         border: 2px solid var(--primary);
         color: var(--primary);
@@ -157,6 +151,20 @@
         color: #fff;
         transform: translateY(-2px);
         box-shadow: 0 5px 10px rgba(108,99,255,0.3);
+    }
+
+    .btn-gradient {
+        background: var(--gradient);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(108,99,255,0.25);
+        transition: 0.3s;
+    }
+
+    .btn-gradient:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(108,99,255,0.35);
     }
 
     article.content {
@@ -181,12 +189,10 @@
             </div>
 
             <div class="d-flex align-items-center gap-3">
-                <!-- Nút đổi tiền -->
                 <button class="currency-btn" data-bs-toggle="modal" data-bs-target="#currencyModal">
                     <i class="fa-solid fa-dollar-sign"></i>
                 </button>
 
-                <!-- Ảnh đại diện -->
                 <a href="{{ route('accounts.edit') }}">
                     <img src="{{ Auth::user()->gender == 0 
                         ? asset('images/default-avatar-male.jpg') 
@@ -215,7 +221,7 @@
             </div>
         </div>
 
-        <!-- Modal đổi đơn vị tiền tệ -->
+        <!-- MODAL đổi đơn vị tiền -->
         <div class="modal fade" id="currencyModal" tabindex="-1" aria-labelledby="currencyModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
@@ -267,30 +273,41 @@
         </div>
 
         <!-- GIAO DỊCH HÔM NAY -->
-        <div class="card p-4 mb-5">
+        <div class="card p-4 mb-4">
             <h5 class="section-title">Giao dịch hôm nay</h5>
             @if ($user->getTodayTransactions()->isEmpty())
-            <p class="text-center text-muted my-4">Hôm nay chưa có giao dịch nào</p>
+                <p class="text-center text-muted my-4">Hôm nay chưa có giao dịch nào</p>
             @else
-            <div class="list-group mt-3">
-                @foreach ($user->getTodayTransactions() as $transaction)
-                <div class="list-group-item border-0 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3">
-                        <img src="{{ asset('images/icon.jpg') }}" class="rounded-circle" width="40">
-                        <div>
-                            <h6 class="m-0">{{ $transaction->category->name }}</h6>
-                            <small class="text-muted">{{ $transaction->formatted_amount }}</small>
+                <div class="list-group mt-3">
+                    @foreach ($user->getTodayTransactions() as $transaction)
+                    <div class="list-group-item border-0 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <img src="{{ asset('images/icon.jpg') }}" class="rounded-circle" width="40">
+                            <div>
+                                <h6 class="m-0">{{ $transaction->category->name }}</h6>
+                                <small class="text-muted">{{ $transaction->formatted_amount }}</small>
+                            </div>
                         </div>
+                        <button class="btn btn-outline-primary-color" data-bs-toggle="modal" data-bs-target="#showTransaction-{{ $transaction->id }}">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
-                    <button class="btn btn-outline-primary-color" data-bs-toggle="modal" data-bs-target="#showTransaction-{{ $transaction->id }}">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
+                    @endforeach
                 </div>
-                @endforeach
-            </div>
             @endif
         </div>
 
+        <!-- NÚT GỬI BÁO CÁO EMAIL -->
+        <div class="text-center mt-4 mb-5">
+            <form action="{{ route('send.daily.report') }}" method="POST">
+                @csrf
+                <button type="submit" class="btn btn-gradient px-4 py-2 fw-bold">
+                    <i class="fa-solid fa-envelope"></i> Gửi báo cáo qua Email
+                </button>
+            </form>
+        </div>
+
+        <!-- MODAL THÊM GIAO DỊCH MỚI -->
         <x-transaction-modal :user="$user" :group-types="$groupTypes" :categories="$categories" />
     </div>
 </div>
