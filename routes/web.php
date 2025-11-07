@@ -31,13 +31,6 @@ Route::get('/', function () {
     return redirect()->route('loading');
   }
 });
-Route::get('/', function () {
-  if (Auth::check()) {
-    return redirect()->route('home.dashboard');
-  } else {
-    return redirect()->route('loading');
-  }
-});
 
 Route::get('/register', [AuthController::class, 'register'])->name('register');
 Route::post('/register', [AuthController::class, 'handleRegister']);
@@ -90,13 +83,26 @@ Route::middleware('checkLogin')->group(function () {
   Route::get('/bank-branches', [BankBranchController::class, 'index'])->name('bank-branches.index');
   Route::post('/bank-branches', [BankBranchController::class, 'search'])->name('bank-branches.search');
 
-  // Route lien quan den ChatbotController
-  Route::middleware(['checkPremium'])->group(function () {
-    Route::group(['prefix' => 'chat', 'as' => 'chat.'], function () {
-    Route::post('create-transaction', [ChatbotController::class, 'createTransaction'])->name('createTransaction');
-    Route::get('history', [ChatBotController::class, 'getChatHistory'])->name('history');
-  });
+  Route::middleware(['checkLogin'])->prefix('chat')->as('chat.')->group(function () {
+
+    // Trang chat
+    Route::get('/', function () {
+        return view('chat.index');
+    })->name('index');
+
+    // Gửi tin nhắn / tạo giao dịch
+    Route::post('/create-transaction', [ChatbotController::class, 'createTransaction'])
+        ->name('createTransaction');
+
+    // Lấy lịch sử chat
+    Route::get('/history', [ChatbotController::class, 'getChatHistory'])
+        ->name('history');
 });
+
+    // Admin routes
+    Route::middleware(['checkPermission'])->group(function () {
+        Route::get('admin', [HomeController::class, 'indexAdmin'])->name('home.admin');
+    });
 
   Route::middleware(['checkPermission'])->group(function () {
   Route::get('admin', [HomeController::class, 'indexAdmin'])->name('home.admin');
@@ -119,3 +125,4 @@ Route::post('/send-daily-report', function () {
 
     return redirect()->back()->with('success', '📧 Báo cáo đã được gửi về email của bạn!');
 })->name('send.daily.report');
+

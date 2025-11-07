@@ -3,206 +3,125 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\OpenAIService;
 use App\Models\ChatBotLog;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Models\Category;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class ChatbotController extends Controller
 {
-  protected $openAIService;
-
-  public function __construct(OpenAIService $openAIService)
-  {
-    $this->openAIService = $openAIService;
-  }
-  public function createTransaction(Request $request)
-  {
-    $userId = Auth::user()->user_id;
-    $userCurrency = Auth::user()->currency;
-    $message = $request->input('message');
-    $response = null; // Initialize response variable
-
-    DB::beginTransaction(); // Start transaction at beginning
-    // Log user message
-    ChatBotLog::create([
-      'user_id' => $userId,
-      'message' => $message,
-      'is_bot' => false,
-      'created_at' => now()
-    ]);
-
-    try {
-
-      $response = $this->openAIService->processMessage($message);
-      if (str_contains($response, 'Transaction generated:')) {
-        $transactionData = $this->parseTransactionResponse($response);
-
-        if (!$transactionData['category_id']) {
-          throw new \Exception("Category không hợp lệ hoặc không tồn tại");
+    // --- Tạo giao dịch từ chatbot ---
+    public function createTransaction(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['reply' => '⚠️ Vui lòng đăng nhập để tiếp tục.'], 401);
         }
 
-        $category = Category::find($transactionData['category_id']);
-        if (!$category) {
-          throw new \Exception("Không tìm thấy danh mục");
+        $message = trim($request->input('message'));
+        $transactionData = $this->parseTransactionMessage($message);
+
+        if (!$transactionData) {
+            return response()->json(['reply' => '❗ Vui lòng nhập đầy đủ *danh mục* và *số tiền*. Ví dụ: "ăn sáng 30000"']);
         }
 
-        $amount = $transactionData['amount'];
-        if ($category->group_type_id == 1 || $category->group_type_id == 3) {
-          $amount = -abs($amount);
-        }
-
-        $amountInUSD = $amount / $this->getExchangeRate($userCurrency, 'USD');
-        $date = Carbon::createFromFormat('Y-m-d', $transactionData['date']);
-
-        $transaction = Transaction::create([
-          'category_id' => $transactionData['category_id'],
-          'wallet_id' => $transactionData['wallet_id'],
-          'amount' => $amountInUSD,
-          'date' => $date,
-          'note' => $transactionData['note'],
-        ]);
-
-        // Update wallet balance
-        $wallet = Wallet::find($transactionData['wallet_id']);
+        $wallet = Wallet::where('user_id', $user->id)->first();
         if (!$wallet) {
-          throw new \Exception("Không tìm thấy ví");
+            return response()->json(['reply' => '⚠️ Bạn chưa có ví nào. Vui lòng tạo ví trước.']);
         }
-        $wallet->balance += $amountInUSD;
-        $wallet->save();
 
-        // Log bot response
-        ChatBotLog::create([
-          'user_id' => $userId,
-          'message' => $response,
-          'is_bot' => true,
-          'created_at' => now()
-        ]);
+        $category = Category::where('name', 'LIKE', '%' . $transactionData['category_name'] . '%')->first();
+        if (!$category) {
+            return response()->json(['reply' => "❌ Danh mục *{$transactionData['category_name']}* chưa tồn tại."]);
+        }
 
-        DB::commit();
+        DB::beginTransaction();
+        try {
+            $amount = (int) $transactionData['amount'];
 
-        return response()->json([
-          'message' => $response,
-          'data' => [
-            'id' => $transaction->id,
-            'amount' => $amountInUSD,
-            'date' => $transaction->date->format('Y-m-d')
-          ]
-        ]);
-      } else {
-        // Just log chat response
-        ChatBotLog::create([
-          'user_id' => $userId,
-          'message' => $response,
-          'is_bot' => true,
-          'created_at' => now()
-        ]);
+            // ✅ Không quy đổi tiền nữa — coi như VND
+            // Nếu là chi tiêu => trừ, nếu là thu nhập => cộng
+            if ($category->type === 'expense') {
+                $wallet->balance -= $amount;
+            } else {
+                $wallet->balance += $amount;
+            }
 
-        DB::commit();
+            $wallet->save();
 
-        return response()->json([
-          'message' => $response
-        ]);
-      }
-    } catch (\Exception $e) {
-      DB::rollBack();
-      Log::error("Error in createTransaction: " . $e->getMessage());
-      return response()->json([
-        'error' => "Không thể xử lý: " . $e->getMessage()
-      ], 400);
-    }
-  }
-  private function parseTransactionResponse($response)
-  {
-    Log::info("OpenAI Response Raw: " . $response);
+            // Lưu giao dịch
+            Transaction::create([
+                'category_id' => $category->category_id,
+                'wallet_id' => $wallet->wallet_id,
+                'amount' => $amount,
+                'date' => $transactionData['date'],
+                'note' => $transactionData['note'] ?: $message,
+            ]);
 
-    $parsed = [];
+            DB::commit();
 
-    // Updated regex patterns to match new format
-    preg_match('/Date: (\d{4}-\d{2}-\d{2})/', $response, $date);
-    preg_match('/Description: (.+)/', $response, $description);
-    preg_match('/Category: (.+)/', $response, $category);
-    preg_match('/Amount: ([\d,\.]+) VND/', $response, $amount);
+            // Ghi log hội thoại
+            ChatBotLog::create(['user_id' => $user->id, 'message' => $message, 'is_bot' => false]);
+            ChatBotLog::create([
+                'user_id' => $user->id,
+                'message' => "✅ Đã thêm giao dịch *{$category->name}* với số tiền " . number_format($amount, 0, ',', '.') . " VND.\n💰 Số dư hiện tại: " . number_format($wallet->balance, 0, ',', '.') . " VND",
+                'is_bot' => true
+            ]);
 
-    // Parse date
-    $parsed['date'] = $date[1] ?? now()->format('Y-m-d');
-
-    // Parse description as note
-    $parsed['note'] = $description[1] ?? null;
-
-    // Parse category
-    $categoryName = trim($category[1] ?? '');
-    $parsed['category_id'] = $this->getCategoryId($categoryName);
-
-    // Parse amount
-    if (isset($amount[1])) {
-      $parsed['amount'] = str_replace(',', '', $amount[1]);
-    } else {
-      throw new \Exception("Số tiền không hợp lệ hoặc không tồn tại");
+            return response()->json([
+                'reply' => "✅ Giao dịch *{$category->name}* thành công!\n💵 Số tiền: " . number_format($amount, 0, ',', '.') . " VND\n💰 Số dư ví: " . number_format($wallet->balance, 0, ',', '.') . " VND"
+            ]);
+} catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Chatbot createTransaction error: ' . $e->getMessage());
+            return response()->json(['reply' => '❌ Bot gặp lỗi khi tạo giao dịch.']);
+        }
     }
 
-    // Set wallet ID
-    $parsed['wallet_id'] = $this->getDefaultWalletId();
+    // --- Lấy lịch sử chat ---
+    public function getChatHistory()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([]);
+        }
 
-    return $parsed;
-  }
-  private function getDefaultWalletId()
-  {
-    // Fetch the wallet ID with the minimum ID for the authenticated user
-    $userId = Auth::user()->id;
-    return DB::table('wallets')
-      ->where('user_id', $userId)
-      ->orderBy('wallet_id', 'asc')
-      ->value('wallet_id');
-  }
-  private function getCategoryId($categoryName)
-  {
-    $categoryId = DB::table('categories')->where('name', $categoryName)->value('category_id');
+        $logs = ChatBotLog::where('user_id', $user->id)
+            ->orderBy('created_at', 'asc')
+            ->get(['message', 'is_bot', 'created_at']);
 
-    if (!$categoryId) {
-      Log::warning("Category không tồn tại trong cơ sở dữ liệu: " . $categoryName);
+        return response()->json($logs);
     }
 
-    return $categoryId;
-  }
-  protected function getExchangeRate($fromCurrency, $toCurrency)
-  {
-    $exchangeRates = [
-      'USD' => 1,
-      'VND' => 25000,
-      'EUR' => 0.96,
-    ];
+    // --- Phân tích tin nhắn người dùng ---
+    private function parseTransactionMessage($message)
+    {
+        $amount = null;
+        $category_name = null;
+        $date = now()->format('Y-m-d');
+        $note = $message;
 
-    if ($fromCurrency === $toCurrency) {
-      return 1;
+        // Xóa dấu ngăn cách tiền tệ
+        $cleanedMessage = str_replace(['.', ','], '', $message);
+
+        // Tìm số tiền trong tin nhắn
+        if (preg_match('/\d+/', $cleanedMessage, $m)) {
+            $amount = (int)$m[0];
+            $pos = strpos($cleanedMessage, $m[0]);
+        } else {
+            return false;
+        }
+
+        // Danh mục là phần trước số tiền
+        $category_name = trim(substr($message, 0, $pos));
+
+        if (!$amount || !$category_name) {
+            return false;
+        }
+
+        return compact('amount', 'category_name', 'date', 'note');
     }
-
-    return $exchangeRates[$fromCurrency] / $exchangeRates[$toCurrency];
-  }
-  public function getChatHistory()
-  {
-    Carbon::setLocale('vi'); // Set Vietnamese locale
-    $userId = Auth::user()->user_id;
-
-    $chatLogs = ChatBotLog::where('user_id', $userId)
-      ->orderBy('created_at', 'asc')
-      ->get()
-      ->map(function ($log) {
-        $createdAt = Carbon::parse($log->created_at);
-        return [
-          'message' => $log->message,
-          'is_bot' => $log->is_bot,
-          'time' => $createdAt->format('H:i'),
-          'date' => $createdAt->translatedFormat('l, d/m/Y'), // Thứ Hai, 01/01/2024
-          'timestamp' => $createdAt->timestamp
-        ];
-      });
-
-    return response()->json($chatLogs);
-  }
 }

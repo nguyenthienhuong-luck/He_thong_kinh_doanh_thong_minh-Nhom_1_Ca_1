@@ -1,31 +1,32 @@
 @component('mail::message')
-# Báo cáo thu/chi ngày {{ $report['date'] ?? now()->toDateString() }}
+# Báo cáo thu/chi ngày {{ $report['date'] }}
 
-Xin chào **{{ $user->name }}**,  
-Dưới đây là tóm tắt tình hình chi tiêu của bạn hôm nay:
+Xin chào **{{ $user->name ?? 'bạn' }}**,
 
----
-
-**Tổng thu:** {{ number_format($report['income'], 0, ',', '.') }} VND  
-**Tổng chi:** {{ number_format($report['expense'], 0, ',', '.') }} VND  
-**Cân đối:** {{ number_format($report['net'], 0, ',', '.') }} VND  
+Dưới đây là tóm tắt **số lượng giao dịch** của bạn hôm nay:
 
 ---
 
-###Chi tiết theo danh mục
-@foreach($report['byCategory'] as $category => $info)
-- **{{ $category }}**: ({{ $info['count'] }} giao dịch)
+**Số giao dịch thu:** {{ $report['income_count'] ?? 0 }}  
+**Số giao dịch chi:** {{ $report['expense_count'] ?? 0 }}  
+**Tổng số giao dịch:** {{ $report['total_count'] ?? 0 }}
+
+---
+
+### Chi tiết theo danh mục:
+@foreach ($report['byCategory'] ?? [] as $name => $item)
+- **{{ $name }}:** ({{ $item['count'] }} giao dịch)
 @endforeach
 
 ---
 
-Cảm ơn bạn đã sử dụng **SmartBudget**
-Hẹn gặp lại vào ngày mai với những con số đẹp hơn nhé!
+Cảm ơn bạn đã sử dụng **SmartBudget**  
+Hẹn gặp lại vào ngày mai với những con số tích cực hơn nhé!
 
-@component('mail::button', ['url' => route('home.dashboard')])
+@component('mail::button', ['url' => url('/dashboard')])
 Xem trên Dashboard
 @endcomponent
 
-_Trân trọng,_  
+Trân trọng,  
 **Đội ngũ SmartBudget**
 @endcomponent

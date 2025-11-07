@@ -32,7 +32,7 @@ class BankBranchController extends Controller
     $response = Http::withHeaders([
       'User-Agent' => 'YourAppName/1.0 (your_email@example.com)',
     ])->withoutVerifying()->get('https://overpass-api.de/api/interpreter', [
-      'data' => '[out:json];node["amenity"="bank"]["name"~"' . $query . '"](' . ($latitude - 0.1) . ',' . ($longitude - 0.1) . ',' . ($latitude + 0.1) . ',' . ($longitude + 0.1) . ');out;',
+      'data' => '[out:json];node["amenity"="bank"]["name"~"' . $query . '", i](' . ($latitude - 0.1) . ',' . ($longitude - 0.1) . ',' . ($latitude + 0.1) . ',' . ($longitude + 0.1) . ');out;',
     ]);
 
     $data = $response->json();

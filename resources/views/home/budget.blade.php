@@ -201,17 +201,20 @@
                     <div class="tab-navigation-wrapper">
                         <ul class="nav nav-pills nav-fill mb-3 bg-body-secondary rounded-3 p-2" id="categoryTabs"
                             role="tablist">
-                            @foreach ($groupTypes as $groupType)
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link {{ $loop->first ? 'active' : '' }}"
-                                        id="tab-{{ $groupType->group_type_id }}" data-bs-toggle="tab"
-                                        data-bs-target="#content-{{ $groupType->group_type_id }}" type="button"
-                                        role="tab">
-                                        {{ $groupType->name }}
-                                    </button>
-                                </li>
-                            @endforeach
-                        </ul>
+                <ul class="nav nav-pills nav-fill mb-3 bg-body-secondary rounded-3 p-2" id="categoryTabs" role="tablist">
+                    @foreach ($groupTypes->where('name', 'Khoản chi') as $groupType)
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $loop->first ? 'active' : '' }}"
+                                id="tab-{{ $groupType->group_type_id }}"
+                                data-bs-toggle="tab"
+                                data-bs-target="#content-{{ $groupType->group_type_id }}"
+                                type="button" role="tab">
+                                {{ $groupType->name }}
+                            </button>
+                        </li>
+                    @endforeach
+                </ul>
+
                     </div>
                     <!-- Tab Contents -->
                     <div class="tab-content">

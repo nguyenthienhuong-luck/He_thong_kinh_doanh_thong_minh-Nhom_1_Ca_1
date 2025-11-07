@@ -21,9 +21,7 @@
                                     ];
                                 @endphp <select class="form-select" id="currency" name="currency" required>
                                     @foreach ($currencies as $code => $name)
-                                        <option value="{{ $code }}"
-                                            {{ $user->currency == $code ? 'selected' : '' }}>
-                                            {{ $name }}
+                                        <option value="{{ $code }}" {{ Auth::user() && Auth::user()->currency == $code ? 'selected' : '' }}>{{ $name }}
                                         </option>
                                     @endforeach
                                 </select>

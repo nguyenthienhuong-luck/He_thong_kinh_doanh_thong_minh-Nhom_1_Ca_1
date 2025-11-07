@@ -184,7 +184,7 @@
         <!-- THANH TỔNG SỐ DƯ -->
         <div class="balance-header">
             <div class="balance-info">
-                <h4>{{ Auth::user()->total_balance ?? '0.00' }} {{ Auth::user()->currency ?? 'VND' }}</h4>
+                <h4>{{ Auth::user()->total_balance ?? '0.00' }} </h4>
                 <span>Tổng số dư</span>
             </div>
 
@@ -306,7 +306,7 @@
                 </button>
             </form>
         </div>
-
+        
         <!-- MODAL THÊM GIAO DỊCH MỚI -->
         <x-transaction-modal :user="$user" :group-types="$groupTypes" :categories="$categories" />
     </div>
@@ -330,4 +330,5 @@ document.addEventListener('DOMContentLoaded', function() {
     weekChart.render();
 });
 </script>
+
 @endsection

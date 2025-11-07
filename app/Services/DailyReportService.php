@@ -8,75 +8,72 @@ use Illuminate\Support\Collection;
 
 class DailyReportService
 {
-    /**
-     * Tạo dữ liệu báo cáo thu/chi cho 1 user trong 1 ngày.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \Carbon\Carbon|null  $forDate
-     * @return array
-     */
     public function buildForUser($user, ?Carbon $forDate = null): array
     {
         $date = $forDate?->copy() ?? now();
-        $start = $date->copy()->startOfDay();
-        $end   = $date->copy()->endOfDay();
 
-        // Lấy danh sách wallet_id thuộc user (nếu có quan hệ wallets)
-        $walletIds = method_exists($user, 'wallets')
-            ? $user->wallets()->pluck('wallet_id')->all()
-            : [];
-
-        // Truy vấn giao dịch trong ngày
+        // Lấy giao dịch trong ngày + join category -> groupType
         $query = Transaction::query()
-            ->with(['groupType', 'category']) // ⚠️ dùng groupType trực tiếp
-            ->whereBetween('date', [$start, $end]);
+            ->with(['category.groupType'])
+            ->whereDate('date', $date->toDateString());
 
-        if (!empty($walletIds)) {
-            $query->whereIn('wallet_id', $walletIds);
-        } elseif (Schema()->hasColumn('transactions', 'user_id')) {
+        // Lọc user hoặc ví
+        if (Schema()->hasColumn('transactions', 'user_id')) {
             $query->where('user_id', $user->id);
+        } elseif (method_exists($user, 'wallets') && $user->wallets()->exists()) {
+            $walletIds = $user->wallets()->pluck('wallet_id')->all();
+            $query->whereIn('wallet_id', $walletIds);
         }
 
         /** @var Collection $tx */
         $tx = $query->get();
 
-        // ✅ Xác định thu/chi theo group_types.name
-        $income = $tx->filter(fn($t) => optional($t->groupType)->name === 'Khoản thu')
-                     ->sum(fn($t) => (float)$t->amount);
+        // ✅ Đếm số lượng giao dịch theo loại
+        $incomeCount = $tx->filter(function ($t) {
+            $type = optional(optional($t->category)->groupType)->name;
+            return in_array(strtolower(trim($type)), ['khoản thu', 'thu nhập', 'income']);
+        })->count();
 
-        $expense = $tx->filter(fn($t) => optional($t->groupType)->name === 'Khoản chi')
-                      ->sum(fn($t) => (float)$t->amount);
+        $expenseCount = $tx->filter(function ($t) {
+            $type = optional(optional($t->category)->groupType)->name;
+            return in_array(strtolower(trim($type)), ['khoản chi', 'chi tiêu', 'expense']);
+        })->count();
 
-        $net = $income - $expense;
+        // ✅ Tổng giao dịch
+        $totalCount = $tx->count();
 
         // ✅ Gom nhóm theo danh mục
         $byCategory = $tx->groupBy(fn($t) => optional($t->category)->name ?? 'Khác')
             ->map(function ($group) {
-                $groupTypeName = optional($group->first()->groupType)->name;
-                $guessType = ($groupTypeName === 'Khoản chi') ? 'expense' : 'income';
+                $groupTypeName = optional(optional($group->first()->category)->groupType)->name;
+                $guessType = str_contains(strtolower($groupTypeName), 'chi') ? 'expense' : 'income';
 
                 return [
                     'count'  => $group->count(),
-                    'amount' => $group->sum(fn($t) => (float)$t->amount),
                     'type'   => $guessType,
                 ];
             })
-            ->sortByDesc('amount');
+            ->sortByDesc('count');
+
+        // ✅ Log để debug
+        \Log::info('Daily report count only', [
+            'date' => $date->toDateString(),
+            'total' => $totalCount,
+            'income_count' => $incomeCount,
+            'expense_count' => $expenseCount,
+        ]);
 
         return [
-            'date'         => $start->toDateString(),
-            'income'       => $income,
-            'expense'      => $expense,
-            'net'          => $net,
-            'byCategory'   => $byCategory,
-            'transactions' => $tx,
+            'date'          => $date->toDateString(),
+            'income_count'  => $incomeCount,
+            'expense_count' => $expenseCount,
+            'total_count'   => $totalCount,
+            'byCategory'    => $byCategory,
+            'transactions'  => $tx,
         ];
     }
 }
 
-/**
- * Helper nhẹ để check cột (tránh lỗi khi fallback user_id)
- */
 if (!function_exists('Schema')) {
     function Schema()
     {
