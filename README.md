@@ -1,7 +1,7 @@
-# Money Mate
+# SmartBudget
 
 ## Giới thiệu
-Money Mate là một ứng dụng quản lý tài chính cá nhân được thiết kế để giúp bạn theo dõi, kiểm soát và tối ưu hóa việc quản lý chi tiêu. Với giao diện thân thiện và các tính năng thông minh, Money Mate trở thành trợ thủ đắc lực trong việc quản lý tài chính hàng ngày của bạn.
+SmartBudget là một ứng dụng quản lý tài chính cá nhân được thiết kế để giúp bạn theo dõi, kiểm soát và tối ưu hóa việc quản lý chi tiêu. Với giao diện thân thiện và các tính năng thông minh, SmartBudget trở thành trợ thủ đắc lực trong việc quản lý tài chính hàng ngày của bạn.
 
 ## Tính năng chính
 - **Quản lý tài khoản và ví tiền**: Hỗ trợ nhiều loại ví và tài khoản khác nhau.
