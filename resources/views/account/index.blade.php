@@ -177,9 +177,17 @@ body {
         <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Đăng xuất
     </a>
 
-    <a href="#" class="account-btn account-btn-danger">
-        <i class="fa-solid fa-trash-can me-2"></i> Xóa tài khoản
-    </a>
+    <form action="{{ route('accounts.destroy') }}" method="POST" 
+          onsubmit="return confirm('CẢNH BÁO: Bạn có chắc chắn muốn XÓA tài khoản? Tất cả dữ liệu (ví, giao dịch, ngân sách) sẽ bị mất vĩnh viễn và KHÔNG THỂ khôi phục.');">
+        
+        @csrf
+        @method('DELETE')
+
+        <button type="submit" class="account-btn account-btn-danger" style="width: 100%;">
+            <i class="fa-solid fa-trash-can me-2"></i> Xóa tài khoản
+        </button>
+    </form>
+
 </div>
 
 <!-- Modal xác nhận đăng xuất -->

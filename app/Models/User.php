@@ -188,38 +188,7 @@ class User extends Authenticatable
 
     return $weeklyExpenses;
   }
-  public function getMonthlyExpenses()
-  {
-    $startOfMonth = Carbon::now()->startOfMonth();
-    $endOfMonth = Carbon::now()->endOfMonth();
-
-    $expenses = $this->transactions()
-      ->whereBetween('date', [$startOfMonth, $endOfMonth])
-      ->selectRaw('WEEK(date) as week, MIN(date) as start_date, MAX(date) as end_date, SUM(amount) as total')
-      ->groupBy('week', 'wallets.user_id')
-      ->get()
-      ->keyBy('week');
-
-    $rate = Helper::getExchangeRate($this->currency);
-
-    $monthlyExpenses = [];
-    $currentDate = $startOfMonth->copy();
-    while ($currentDate <= $endOfMonth) {
-      $week = $currentDate->weekOfMonth;
-      $startOfWeek = $currentDate->copy()->startOfWeek();
-      $endOfWeek = $currentDate->copy()->endOfWeek();
-      if ($endOfWeek > $endOfMonth) {
-        $endOfWeek = $endOfMonth;
-      }
-
-      $weekLabel = 'Tuần ' . $week . ' [' . $startOfWeek->format('d/m/Y') . ' => ' . $endOfWeek->format('d/m/Y') . ']';
-      $monthlyExpenses[$weekLabel] = $expenses->has($week) ? $expenses[$week]->total * $rate : 0;
-
-      $currentDate->addWeek();
-    }
-
-    return $monthlyExpenses;
-  }
+ 
   private function getDayOfWeekInVietnamese($dayOfWeek)
   {
     $days = [

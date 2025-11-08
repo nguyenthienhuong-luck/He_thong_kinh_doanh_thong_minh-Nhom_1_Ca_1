@@ -181,4 +181,31 @@ class AccountController extends Controller
         ->with('message', 'Có lỗi xảy ra, vui lòng thử lại sau');
     }
   }
+  public function destroy()
+    {
+        try {
+            // 1. Lấy người dùng đang đăng nhập
+            $user = Auth::user();
+
+            // 2. Đăng xuất họ ra khỏi hệ thống (Quan trọng!)
+            Auth::logout();
+
+            // 3. Xóa người dùng khỏi CSDL
+            // (Tất cả ví, giao dịch... liên quan sẽ tự động bị xóa 
+            // nếu bạn có cài 'on delete cascade' trong migration)
+            $user->delete();
+
+            // 4. Đưa họ về trang đăng nhập với thông báo
+            return redirect()->route('login')
+                ->with('type', 'success')
+                ->with('message', 'Tài khoản của bạn đã được xóa thành công.');
+
+        } catch (Exception $e) {
+            Log::error("Error in AccountController@destroy: " . $e->getMessage());
+            return redirect()->back()
+                ->with('type', 'danger')
+                ->with('message', 'Có lỗi xảy ra, không thể xóa tài khoản.');
+        }
+    }
+
 }

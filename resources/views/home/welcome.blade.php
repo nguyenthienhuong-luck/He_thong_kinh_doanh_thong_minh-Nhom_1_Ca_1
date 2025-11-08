@@ -209,7 +209,7 @@
   <section class="hero">
     <h1>Kiểm soát tài chính dễ dàng và thông minh</h1>
     <p>Bạn xứng đáng có một công cụ quản lý chi tiêu đơn giản, hiệu quả và đầy cảm hứng.  
-    Money Love giúp bạn theo dõi, tiết kiệm và đạt mục tiêu tài chính.</p>
+    SmartBudget giúp bạn theo dõi, tiết kiệm và đạt mục tiêu tài chính.</p>
 
     <div class="features">
       <div class="feature-card">

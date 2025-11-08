@@ -55,6 +55,7 @@ Route::middleware('checkLogin')->group(function () {
     Route::put('profile/{id}', [AccountController::class, 'update'])->name('update');
     Route::post('createPaymentLink', [AccountController::class, 'createPaymentLink'])->name('createPaymentLink');
     Route::get('handlePaymentSuccess', [AccountController::class, 'handlePaymentSuccess'])->name('handlePaymentSuccess');
+    Route::delete('', [AccountController::class, 'destroy'])->name('destroy');
   });
 
 

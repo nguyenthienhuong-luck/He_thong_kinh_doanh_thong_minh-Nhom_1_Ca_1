@@ -258,16 +258,10 @@
                 <li class="nav-item">
                     <button class="nav-link active" id="report-pills-week-tab" data-bs-toggle="pill" data-bs-target="#report-pills-week">Tuần</button>
                 </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="report-pills-month-tab" data-bs-toggle="pill" data-bs-target="#report-pills-month">Tháng</button>
-                </li>
             </ul>
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="report-pills-week">
                     <div id="weekly-expense-chart"></div>
-                </div>
-                <div class="tab-pane fade" id="report-pills-month">
-                    <div id="monthly-expense-chart"></div>
                 </div>
             </div>
         </div>
